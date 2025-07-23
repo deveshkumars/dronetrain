@@ -34,7 +34,7 @@ from brax.io import html, mjcf, model
 from brax.training.acme import running_statistics
 
 # Configuration flags
-TRAIN_MODEL = True  # Set to False to skip training and just test TFLite inference
+TRAIN_MODEL = False  # Set to False to skip training and just test TFLite inference
 MODEL_PATH = os.path.abspath('/users/dkumar23/scratch/dronetrain/models')
 TFLITE_PATH = os.path.abspath('/users/dkumar23/scratch/dronetrain/tflitemodels')
 
@@ -110,7 +110,8 @@ class SimpleEnv(PipelineEnv):
         reward_spin = 1.0 / (1.0 + jnp.square(spinnage))
 
         effort = jnp.sum(jnp.square(action))
-        reward_effort = self.reward_effort_weight * jnp.exp(-effort)
+        # reward_effort = self.reward_effort_weight * jnp.exp(-effort)
+        reward_effort = self.reward_effort_weight
 
         reward = reward_pos + reward_pos * reward_spin + reward_effort
 
@@ -157,6 +158,7 @@ def train_model():
     make_networks_factory = functools.partial(
         ppo_networks.make_ppo_networks,
             policy_hidden_layer_sizes=(32, 32),
+            activation=jax.nn.relu,
     )
     
     train_fn = functools.partial(
@@ -238,6 +240,7 @@ def load_model():
     make_networks_factory = functools.partial(
         ppo_networks.make_ppo_networks,
         policy_hidden_layer_sizes=(32, 32),
+        activation=jax.nn.relu,
     )
     
     train_fn = functools.partial(
@@ -302,7 +305,7 @@ def convert_to_tflite(params, make_inference_fn, env):
     
     # Create the inference function
     inference_fn = make_inference_fn(params)
-    
+
     # Get observation shape from environment
     rng = jax.random.PRNGKey(0)
     state = env.reset(rng)
@@ -330,7 +333,7 @@ def convert_to_tflite(params, make_inference_fn, env):
             reconstructed_params = params
             
         # Recreate the inference function with proper parameters
-        temp_inference_fn = make_inference_fn(reconstructed_params)
+        temp_inference_fn = make_inference_fn(reconstructed_params, deterministic=True)
         action, _ = temp_inference_fn(obs, rng)
         return action
     
@@ -405,7 +408,9 @@ def test_tflite_model(tflite_model, params, make_inference_fn, env):
     interpreter.set_tensor(input_details[0]["index"], test_obs_int8) # changed from og
     interpreter.invoke()
     tflite_action = interpreter.get_tensor(output_details[0]["index"])
-    
+    scale, zero_point = output_details[0]['quantization'] # added from og
+    tflite_action_float = (tflite_action - zero_point) * scale # added from og
+
     print(f"JAX action shape: {jax_action.shape}")
     print(f"TFLite action shape: {tflite_action.shape}")
     print(f"JAX action: {jax_action}")
@@ -413,7 +418,7 @@ def test_tflite_model(tflite_model, params, make_inference_fn, env):
     
     # Compare results
     try:
-        np.testing.assert_allclose(jax_action, tflite_action.flatten(), rtol=1e-4, atol=1e-4)
+        np.testing.assert_allclose(jax_action, tflite_action_float.flatten(), rtol=1e-4, atol=1e-4)
         print("✅ TFLite model matches JAX model!")
     except AssertionError as e:
         print(f"⚠️  Small differences detected: {e}")
@@ -476,7 +481,7 @@ def main():
     tflite_model = convert_to_tflite(params, make_inference_fn, env)
     
     # Test the converted model
-    # test_tflite_model(tflite_model, params, make_inference_fn, env)
+    test_tflite_model(tflite_model, params, make_inference_fn, env)
     
     print("\n=== Pipeline Complete ===")
     print(f"Trained model saved at: {MODEL_PATH}")
