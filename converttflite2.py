@@ -57,7 +57,6 @@ class SimpleEnv(PipelineEnv):
         mj_model.opt.ls_iterations = 10
 
         sys = mjcf.load_model(mj_model)
-        self.data2 = mujoco.MjData(mj_model)
 
         # number of physics steps per control action
         physics_steps = 5
@@ -135,13 +134,9 @@ class SimpleEnv(PipelineEnv):
                            done=done)
 
     def _get_obs(self, data, action):
-        # Standard obs: qpos and qvel
-        obs = jnp.concatenate([data.qpos, data.qvel])
-
-        # print(len(obs))  # For 
-        # print("data.qpos",data.qpos)
-        # print("data.qvel",data.qvel)
-        # print("gyro",self.data2.sensor('body_gyro').data)
+        obs = jnp.concatenate([data.qpos,
+                             data.qvel,
+                             action])
         return obs
 
 # Register the environment
@@ -342,26 +337,22 @@ def convert_to_tflite(params, make_inference_fn, env):
             tf.TensorSpec(shape=(1, obs_shape[0]), dtype=tf.float32, name="observation")
         )
     ])
-    
+
     def representative_dataset():
-        # for _ in range(512):
-        data = np.random.rand(512, obs_shape[0])
-        yield [data.astype(np.float32)]
-
-
+        for _ in range(100):
+            data = np.random.rand(1, obs_shape[0])
+            yield [data.astype(np.float32)]
+    
     # Optional: Apply optimizations
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    # converter.representative_dataset = representative_dataset
-    # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-    # converter.inference_input_type = tf.int8
-    # converter.inference_output_type = tf.int8
+    converter.representative_dataset = representative_dataset
+    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    converter.inference_input_type = tf.int8
+    converter.inference_output_type = tf.int8
  
+    
     tflite_model = converter.convert()
     
-    interpreter = tf.lite.Interpreter(model_content=tflite_model)
-    input_details = interpreter.get_input_details()
-    print("TFLite input type:", input_details[0]['dtype'])
-
     # Save the TFLite model
     os.makedirs(os.path.dirname(TFLITE_PATH), exist_ok=True)
     with open(TFLITE_PATH, 'wb') as f:
@@ -381,7 +372,6 @@ def test_tflite_model(tflite_model, params, make_inference_fn, env):
     
     # Get prediction from original JAX model
     inference_fn = make_inference_fn(params)
-    inference_fn = jax.jit(inference_fn)
     rng_action = jax.random.PRNGKey(0)
     jax_action, _ = inference_fn(state.obs, rng_action)
     
@@ -396,7 +386,9 @@ def test_tflite_model(tflite_model, params, make_inference_fn, env):
     print(f"TFLite output details: {output_details}")
     
     # Set input and run inference
-    interpreter.set_tensor(input_details[0]["index"], test_obs.astype(np.float32))
+    scale, zero_point = input_details[0]['quantization'] # added from og
+    test_obs_int8 = (test_obs / scale + zero_point).astype(np.int8) # added from og
+    interpreter.set_tensor(input_details[0]["index"], test_obs_int8) # changed from og
     interpreter.invoke()
     tflite_action = interpreter.get_tensor(output_details[0]["index"])
     
@@ -470,7 +462,6 @@ def main():
     tflite_model = convert_to_tflite(params, make_inference_fn, env)
     
     # Test the converted model
-    print(len(params))
     test_tflite_model(tflite_model, params, make_inference_fn, env)
     
     print("\n=== Pipeline Complete ===")
