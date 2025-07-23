@@ -1,0 +1,18 @@
+[project]
+name = "dronetrain"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "brax>=0.12.4",
+    "ffmpeg>=1.4",
+    "jax[cuda12]>=0.6.2",
+    "matplotlib>=3.10.3",
+    "mediapy>=1.2.4",
+    "mujoco>=3.3.4",
+    "mujoco-mjx>=3.3.4",
+    "orbax>=0.1.9",
+    "orbax-export>=0.0.6",
+    "tensorflow>=2.19.0",
+]
