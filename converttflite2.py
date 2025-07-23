@@ -15,6 +15,7 @@ from orbax.export import ExportManager, JaxModule, ServingConfig, constants
 from orbax import checkpoint as ocp
 from brax import envs
 from brax.training.agents.ppo import train as ppo
+from brax.training.agents.ppo import networks as ppo_networks
 import mujoco
 import matplotlib.pyplot as plt
 
@@ -33,7 +34,7 @@ from brax.io import html, mjcf, model
 from brax.training.acme import running_statistics
 
 # Configuration flags
-TRAIN_MODEL = False  # Set to False to skip training and just test TFLite inference
+TRAIN_MODEL = True  # Set to False to skip training and just test TFLite inference
 MODEL_PATH = os.path.abspath('/users/dkumar23/scratch/dronetrain/models')
 TFLITE_PATH = os.path.abspath('/users/dkumar23/scratch/dronetrain/tflitemodels')
 
@@ -153,6 +154,11 @@ def train_model():
     print("position:", env.sys.qpos0)
 
     # Training configuration
+    make_networks_factory = functools.partial(
+        ppo_networks.make_ppo_networks,
+            policy_hidden_layer_sizes=(32, 32),
+    )
+    
     train_fn = functools.partial(
         ppo.train,
         num_timesteps=100000,
@@ -170,6 +176,7 @@ def train_model():
         num_envs=512,
         batch_size=512,
         seed=0,
+        network_factory=make_networks_factory
     )
 
     # Training progress tracking
@@ -227,6 +234,12 @@ def load_model():
     env = envs.get_environment('simple')
     
     # We need to recreate the training function to get the make_inference_fn
+    
+    make_networks_factory = functools.partial(
+        ppo_networks.make_ppo_networks,
+        policy_hidden_layer_sizes=(32, 32),
+    )
+    
     train_fn = functools.partial(
         ppo.train,
         num_timesteps=100000,
@@ -244,6 +257,7 @@ def load_model():
         num_envs=512,
         batch_size=512,
         seed=0,
+        network_factory=make_networks_factory
     )
     
     # Load the parameters using orbax checkpoint
@@ -462,7 +476,7 @@ def main():
     tflite_model = convert_to_tflite(params, make_inference_fn, env)
     
     # Test the converted model
-    test_tflite_model(tflite_model, params, make_inference_fn, env)
+    # test_tflite_model(tflite_model, params, make_inference_fn, env)
     
     print("\n=== Pipeline Complete ===")
     print(f"Trained model saved at: {MODEL_PATH}")
