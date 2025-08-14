@@ -178,8 +178,7 @@ class SimpleEnv(PipelineEnv):
     #  - cable stretch (if desired)
     #  - last action
     obs = jnp.concatenate([data.qpos,
-                           data.qvel,
-                           action])
+                           data.qvel])
     return obs
 
 cam = mujoco.MjvCamera()
@@ -225,20 +224,20 @@ env    = envs.get_environment(env_name)
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=1, # default 1000000
+    num_timesteps=1000000, # default 1000000
     num_evals=5,
     reward_scaling=0.1,
     episode_length=200,
     normalize_observations=True,
     action_repeat=1,
-    unroll_length=1, # default 10
-    num_minibatches=1, # default 24
-    num_updates_per_batch=1, # default 8
+    unroll_length=10, # default 10
+    num_minibatches=24  , # default 24
+    num_updates_per_batch=8, # default 8
     discounting=0.97,
     learning_rate=3e-4,
     entropy_cost=1e-3,
-    num_envs=2, # default 512
-    batch_size=2, # default 512
+    num_envs=512, # default 512
+    batch_size=512, # default 512
     seed=0,
 )
 
@@ -269,7 +268,7 @@ make_inference_fn, params, _ = train_fn(environment=env, progress_fn=progress)
 #@title Save Model
 model_path = 'models/mjx_brax_policy'
 model.save_params(model_path, params)
-
+exit()
 #@title Load Model and Define Inference Function
 params = model.load_params(model_path)
 

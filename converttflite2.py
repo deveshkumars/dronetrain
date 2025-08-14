@@ -34,7 +34,7 @@ from brax.io import html, mjcf, model
 from brax.training.acme import running_statistics
 
 # Configuration flags
-TRAIN_MODEL = False  # Set to False to skip training and just test TFLite inference
+TRAIN_MODEL = True  # Set to False to skip training and just test TFLite inference
 MODEL_PATH = os.path.abspath('/users/dkumar23/scratch/dronetrain/models')
 TFLITE_PATH = os.path.abspath('/users/dkumar23/scratch/dronetrain/tflitemodels')
 
@@ -356,7 +356,7 @@ def convert_to_tflite(params, make_inference_fn, env):
     ])
 
     def representative_dataset():
-        for _ in range(100):
+        for _ in range(512):
             data = np.random.rand(1, obs_shape[0])
             yield [data.astype(np.float32)]
     
@@ -415,6 +415,7 @@ def test_tflite_model(tflite_model, params, make_inference_fn, env):
     print(f"TFLite action shape: {tflite_action.shape}")
     print(f"JAX action: {jax_action}")
     print(f"TFLite action: {tflite_action.flatten()}")
+    print(f"TFLite action float: {tflite_action_float.flatten()}")
     
     # Compare results
     try:
@@ -453,7 +454,7 @@ def test_tflite_model(tflite_model, params, make_inference_fn, env):
     # TFLite inference timing
     start_time = datetime.now()
     for _ in range(n_trials):
-        interpreter.set_tensor(input_details[0]["index"], test_obs.astype(np.float32))
+        interpreter.set_tensor(input_details[0]["index"], test_obs.astype(np.int8))
         interpreter.invoke()
         tflite_action = interpreter.get_tensor(output_details[0]["index"])
     tflite_time = (datetime.now() - start_time).total_seconds()
