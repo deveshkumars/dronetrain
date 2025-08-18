@@ -1,3 +1,6 @@
 [submodule "submodules/Custom-Crazyflie-Mujoco-Model"]
 	path = submodules/Custom-Crazyflie-Mujoco-Model
 	url = git@github.com:deveshkumars/Custom-Crazyflie-Mujoco-Model.git
+[submodule "weights_to_firmware"]
+	path = weights_to_firmware
+	url = https://github.com/deveshkumars/weights_to_firmware.git
