@@ -4,3 +4,6 @@
 [submodule "weights_to_firmware"]
 	path = weights_to_firmware
 	url = https://github.com/deveshkumars/weights_to_firmware.git
+[submodule "ai_drone_firmware"]
+	path = firmware/ai_drone_firmware
+	url = https://github.com/deveshkumars/ai_drone_firmware
