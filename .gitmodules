@@ -1,0 +1,3 @@
+[submodule "submodules/Custom-Crazyflie-Mujoco-Model"]
+	path = submodules/Custom-Crazyflie-Mujoco-Model
+	url = git@github.com:deveshkumars/Custom-Crazyflie-Mujoco-Model.git
