@@ -61,6 +61,29 @@ def move_network_evaluate_to_firmware(weights_to_firmware_dir: str) -> None:
     print(f"Moved network_evaluate.c to {dest_path}")
 
 
+def get_default_model_xml_path() -> str:
+    """Get the default path to scene_mjx.xml in the Custom-Crazyflie-Mujoco-Model submodule."""
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Construct path to the default scene_mjx.xml
+    default_xml_path = os.path.join(
+        script_dir, 
+        'submodules', 
+        'Custom-Crazyflie-Mujoco-Model', 
+        'scene_mjx.xml'
+    )
+    
+    if not os.path.exists(default_xml_path):
+        raise FileNotFoundError(
+            f"Default scene_mjx.xml not found at: {default_xml_path}\n"
+            "Please ensure the Custom-Crazyflie-Mujoco-Model submodule is initialized:\n"
+            "git submodule update --init --recursive"
+        )
+    
+    return default_xml_path
+
+
 def main():
     parser = argparse.ArgumentParser(description='DroneTrain entrypoint')
     parser.add_argument('--env', default='simple', help='Environment name registered in Brax')
@@ -69,10 +92,15 @@ def main():
     parser.add_argument('--model_dir', default='models/mjx_brax_policy', help='Directory to save/load model params')
     parser.add_argument('--video', default='gifs/simple_train.mp4', help='Video path for evaluation (set empty to skip)')
     parser.add_argument('--steps', type=int, default=200, help='Evaluation steps')
-    parser.add_argument('--model_xml', default=None, help='Override MuJoCo XML path for the environment')
+    parser.add_argument('--model_xml', default=None, help='Override MuJoCo XML path for the environment (defaults to submodules/Custom-Crazyflie-Mujoco-Model/scene_mjx.xml)')
     args = parser.parse_args()
 
-    env_kwargs = {'model_xml_path': args.model_xml} if args.model_xml else None
+    # Use default model_xml if none specified
+    model_xml_path = args.model_xml if args.model_xml else get_default_model_xml_path()
+    env_kwargs = {'model_xml_path': model_xml_path}
+    
+    if not args.model_xml:
+        print(f"Using default model XML: {model_xml_path}")
 
     make_inference_fn = None
     params = None
