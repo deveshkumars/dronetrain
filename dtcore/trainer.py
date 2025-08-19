@@ -93,7 +93,7 @@ def train(env_name: str = 'simple', config_overrides: Dict[str, Any] | None = No
             return x
 
     cpu_state = jax.tree_util.tree_map(to_numpy, state_dict)
-    with open(pkl_path, 'wb') as f:
+    with open(model_dir, 'wb') as f:
         pickle.dump(cpu_state, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     # save a training curve plot
