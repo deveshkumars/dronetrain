@@ -36,6 +36,16 @@ CLI flags:
 - `--steps`: Evaluation rollout steps (default 200).
 - `--video`: Output video path (set empty to skip).
 
+### Automatic Workflow After Training
+When using `--train`, the system automatically performs a complete workflow:
+
+1. **Training**: Trains the policy and saves parameters to `--model_dir`
+2. **File Movement**: Moves the saved `.pkl` file to `weights_to_firmware/input_model/`
+3. **C Code Generation**: Runs the weights-to-firmware conversion to generate C code
+4. **Firmware Integration**: Moves `network_evaluate.c` to `firmware/network_evaluate.h`
+
+This creates a seamless pipeline from training completion to having firmware-ready neural network code.
+
 ### Programmatic usage
 ```python
 from dtcore import trainer
@@ -71,4 +81,16 @@ python train.py
 git submodule update --init --recursive
 # Later updates:
 git submodule update --remote --merge submodules/Custom-Crazyflie-Mujoco-Model
+```
+
+### Project Structure
+```
+dronetrain/
+├── main.py                 # Main entrypoint with automatic workflow
+├── firmware/               # Generated firmware files
+│   └── network_evaluate.h  # Neural network code for drone firmware
+├── weights_to_firmware/    # Submodule for model conversion
+│   ├── input_model/        # Input model files (.pkl)
+│   └── output_model/       # Generated C code output
+└── models/                 # Trained model parameters
 ```
