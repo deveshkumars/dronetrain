@@ -76,7 +76,7 @@ def train(env_name: str = 'simple', config_overrides: Dict[str, Any] | None = No
     make_inference_fn, params, logs = train_fn(environment=env, progress_fn=progress)
 
     # persist (Brax format)
-    os.makedirs(model_dir, exist_ok=True)
+    # os.makedirs(model_dir, exist_ok=True)
     brax_model_io.save_params(model_dir, params)
 
     # also persist as a .pkl for convenience/interchange
